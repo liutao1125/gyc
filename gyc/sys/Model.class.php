@@ -18,8 +18,12 @@ class Model
          */
         if (!self::$dbp instanceof PDO) {
             try {
-                self::$dbp = new PDO("mysql:host={$DB_CONFIG['h']};dbname={$DB_CONFIG['db']}", $DB_CONFIG['u'], $DB_CONFIG['p']);
-                self::$dbp->exec("SET NAMES 'utf8'");
+                self::$dbp = new PDO("mysql:host={$DB_CONFIG['h']};dbname={$DB_CONFIG['db']}", $DB_CONFIG['u'], $DB_CONFIG['p'],
+                    array(
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_PERSISTENT => false,
+                        PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8mb4'
+                    ));
             } catch (PDOException $e) {
                 ToolTip::pdoException($e);
             }
