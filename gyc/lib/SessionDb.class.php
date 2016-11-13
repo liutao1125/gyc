@@ -1,7 +1,7 @@
 <?php
-namespace GYC\lib;
+namespace Gyc\Lib;
 
-use GYC\sys\Model;
+use Gyc\Sys\Model;
 
 class SessionDb extends Model implements \SessionHandlerInterface
 {

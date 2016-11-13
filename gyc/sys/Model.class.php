@@ -1,5 +1,5 @@
 <?php
-namespace GYC\sys;
+namespace Gyc\Sys;
 
 use PDO;
 use PDOException;
@@ -11,8 +11,8 @@ class Model
 
     public function __construct()
     {
-        $DB_CONFIG = null;
-        require SYS_PATH . 'config/db.config.php';//加载数据库配置文件
+        //加载数据库配置文件
+        $DB_CONFIG = require GYC_PATH . 'config/db.config.php';
         /*
          * 连接数据库
          */
@@ -25,7 +25,7 @@ class Model
                         PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8mb4'
                     ));
             } catch (PDOException $e) {
-                ToolTip::pdoException($e);
+                Tip::e($e);
             }
         }
     }
@@ -46,7 +46,7 @@ class Model
                 return false;
             }
         } catch (PDOException $e) {
-            ToolTip::pdoException($e);
+            Tip::e($e);
         }
     }
 
@@ -66,7 +66,7 @@ class Model
                 return false;
             }
         } catch (PDOException $e) {
-            ToolTip::pdoException($e);
+            Tip::e($e);
         }
     }
 
@@ -87,7 +87,7 @@ class Model
                 return false;
             }
         } catch (PDOException $e) {
-            ToolTip::pdoException($e);
+            Tip::e($e);
         }
     }
 
@@ -117,7 +117,7 @@ class Model
                 return false;
             }
         } catch (PDOException $e) {
-            ToolTip::pdoException($e);
+            Tip::e($e);
         } finally {
             $this->where_str = null;
         }
@@ -149,7 +149,7 @@ class Model
                 return false;
             }
         } catch (PDOException $e) {
-            ToolTip::pdoException($e);
+            Tip::e($e);
         } finally {
             $this->where_str = null;
         }
@@ -191,7 +191,7 @@ class Model
                 return false;
             }
         } catch (PDOException $e) {
-            ToolTip::pdoException($e);
+            Tip::e($e);
         } finally {
             $this->where_str = null;
         }
@@ -223,7 +223,7 @@ class Model
                 return false;
             }
         } catch (PDOException $e) {
-            ToolTip::pdoException($e);
+            Tip::e($e);
         }
     }
 
@@ -253,7 +253,7 @@ class Model
                 return false;
             }
         } catch (PDOException $e) {
-            ToolTip::pdoException($e);
+            Tip::e($e);
         }
     }
 
@@ -283,7 +283,7 @@ class Model
                 return false;
             }
         } catch (PDOException $e) {
-            ToolTip::pdoException($e);
+            Tip::e($e);
         } finally {
             $this->where_str = null;
         }
@@ -315,7 +315,7 @@ class Model
                 return false;
             }
         } catch (PDOException $e) {
-            ToolTip::pdoException($e);
+            Tip::e($e);
         }
     }
 

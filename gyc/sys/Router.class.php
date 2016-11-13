@@ -1,148 +1,137 @@
 <?php
-namespace GYC\sys;
+namespace Gyc\Sys;
+/**
+ * 路由类
+ * Class Router
+ * @package Gyc\Sys
+ */
 class Router
 {
     /**
-     * 匹配路由
-     * @param $bcm
+     * 解析路由
+     * @param $mca_array
      */
-    public static function router($bcm)
+    public static function parseRouter($mca_array)
     {
-        $URL_CONFIG = null;
-        //加载url配置文件
-        require_once SYS_PATH . 'config/url.config.php';
-        //去除:
-        $colon_pos = strpos($bcm, ':');
-        if ($colon_pos !== false) {
-            $bcm = substr($bcm, 0, $colon_pos);
-        }
-        //后缀名排除
-        $dot_pos = strpos($bcm, '.');
-        if ($dot_pos !== false) {
-            if (!in_array(substr($bcm, $dot_pos + 1), explode('|', $URL_CONFIG['suffix']))) {
-                ToolTip::e404();
+        if (empty($mca_array)) {//没有任何路由参数
+            $relMca_array = null;
+        } else {//需要路由匹配
+            $roules_array = array();
+            foreach (explode('|', REGISTER_MODULE) as $m) {
+                //合并所有模块的路由配置
+                $file = APP_PATH . "$m/config/router.config.php";
+                if (file_exists($file)) {
+                    $roule_array = require $file;
+                    $roules_array = array_merge($roules_array, $roule_array);
+                }
             }
-            $bcm = substr($bcm, 0, $dot_pos);//去除后缀的bcm
+            if (!empty($roules_array)) {
+                $relMca_array = self::relMCA($mca_array, $roules_array);
+            } else {
+                //路由配置都是空的
+                $relMca_array = null;
+            }
         }
-        self::dispatcher(self::getRelBCM($bcm), $URL_CONFIG);
+        self::dispatch($relMca_array);
     }
 
     /**
-     * 获得真实的BCM
-     * @param $bcm
+     * 获取真实的MCA
+     * @param $mca_array
+     * @param $roules_array
      * @return mixed
      */
-    private static function getRelBCM($bcm)
+    private static function relMCA($mca_array, $roules_array)
     {
-        $URL_MAP_RULE_CONFIG = null;
-        //加载静态路由规则配置文件
-        require_once SYS_PATH . 'config/url_map_rule.config.php';
-        //计算路由
-        $bcm_array = array_filter(explode('/', $bcm));
-        $bcm_count = count($bcm_array);
-        if ($bcm_count > 0) {
-            foreach ($URL_MAP_RULE_CONFIG as $key => $value) {
-                //不需要array_filter,因为$key是来自配置文件
-                $key_count = count(explode('/', $key));
-                //个数相同
-                if ($bcm_count == $key_count) {
-                    //冒号位置
-                    $colon_pos = strpos($key, ':');
-                    //不包含请求参数且字符串相等，即匹配成功
-                    if ($colon_pos === false && $bcm == $key) {
-                        return $value;
-                    } elseif ($colon_pos !== false) {//包含请求参数
-                        //get关键字之前的
-                        $rel_key = array_filter(explode('/', substr($key, 0, $colon_pos)));
-                        $tf = true;
-                        for ($i = 0; $i < count($rel_key); $i++) {
-                            if ($rel_key[$i] != $bcm_array[$i]) {
-                                $tf = false;
-                                break;
-                            }
-                        }
-                        if ($tf) {
-                            $get_key = array_map(function ($v) {
-                                return ltrim($v, ':');
-                            }, array_filter(explode('/', substr($key, $colon_pos))));
-                            //赋值$_GET
-                            foreach ($get_key as $item) {
-                                $_GET[$item] = $bcm_array[$i];
-                                $i++;
-                            }
-                            return $value;
+        foreach ($roules_array as $key => $value) {
+            $key_array = explode('/', $key);//路由左边的值拆分成数组
+            if (count($key_array) == count($mca_array)) {//数量相同才比较,可能有匹配项
+                $colon_pos = strpos($key, ':');
+                $has_get = false;
+                if ($colon_pos !== false) {//包含GET请求
+                    $has_get = true;
+                    $noColon_array = array_filter(explode('/', substr($key, 0, $colon_pos)));
+                } else {
+                    $noColon_array = $key_array;
+                }
+                $is_match = true;
+                for ($i = 0; $i < count($noColon_array); $i++) {
+                    if ($noColon_array[$i] != $mca_array[$i]) {
+                        $is_match = false;
+                        break;
+                    }
+                }
+                if ($is_match) {//有匹配项
+                    if ($has_get) {//有GET参数,为$_GET赋值
+                        for ($i; $i < count($key_array); $i++) {
+                            $_GET[ltrim($key_array[$i], ':')] = $mca_array[$i];
                         }
                     }
+                    return explode('/', $value);
                 }
             }
         }
-        return $bcm;
+        return $mca_array;
     }
 
     /**
-     * 分发给对应模块、控制器、方法
-     * @param $url
-     * @param $URL_CONFIG
+     * 根据路由表里面的真实MCA进行调度
+     * @param $relMca_array
      */
-    private static function dispatcher($url, $URL_CONFIG)
+    private static function dispatch($relMca_array)
     {
-        //拆分出模块、控制器、方法
-        $bcm_array = array_filter(explode('/', $url));
-        $classname = null;
-        $method = null;
         /**
-         *
-         * 0：默认模块、默认控制器、默认方法
-         * 1：自选模块、默认控制器、默认方法
-         * 2：自选模块、自选控制器、默认方法
-         * 3：自选模块、自选控制器、自选方法
-         *
+         * 1:模块 其实对应名称空间
+         * 2:控制器
+         * 3:动作
          */
-        switch (count($bcm_array)) {
+        switch (count($relMca_array)) {
             case 0: {
-                $filename = APP_PATH . 'controller/' . strtolower($URL_CONFIG['block']) . '/' . ucfirst($URL_CONFIG['control']) . '.class.php';
-                if (file_exists($filename)) {
-                    require $filename;
-                    $method = $URL_CONFIG['method'];
-                    $classname = '\\' . ucfirst($URL_CONFIG['block']) . '\\' . ucfirst($URL_CONFIG['control']);
-                }
+                $module = DEFAULT_MODULE;
+                $controller = DEFAULT_CONTROLLER;
+                $action = DEFAULT_ACTION;
             }
                 break;
             case 1: {
-                $filename = APP_PATH . 'controller/' . strtolower($bcm_array[0]) . '/' . ucfirst($URL_CONFIG['control']) . '.class.php';
-                if (file_exists($filename)) {
-                    require $filename;
-                    $method = $URL_CONFIG['method'];
-                    $classname = '\\' . ucfirst($bcm_array[0]) . '\\' . ucfirst($URL_CONFIG['control']);
-                }
+                $module = $relMca_array[0];
+                $controller = DEFAULT_CONTROLLER;
+                $action = DEFAULT_ACTION;
             }
                 break;
             case 2: {
-                $filename = APP_PATH . 'controller/' . strtolower($bcm_array[0]) . '/' . ucfirst($bcm_array[1]) . '.class.php';
-                if (file_exists($filename)) {
-                    require $filename;
-                    $method = $URL_CONFIG['method'];
-                    $classname = '\\' . ucfirst($bcm_array[0]) . '\\' . ucfirst($bcm_array[1]);
-                }
+                $module = $relMca_array[0];
+                $controller = $relMca_array[1];
+                $action = DEFAULT_ACTION;
             }
                 break;
             case 3: {
-                $filename = APP_PATH . 'controller/' . strtolower($bcm_array[0]) . '/' . ucfirst($bcm_array[1]) . '.class.php';
-                if (file_exists($filename)) {
-                    require $filename;
-                    $method = $bcm_array[2];
-                    $classname = '\\' . ucfirst($bcm_array[0]) . '\\' . ucfirst($bcm_array[1]);
-                }
+                $module = $relMca_array[0];
+                $controller = $relMca_array[1];
+                $action = $relMca_array[2];
             }
                 break;
             default: {
-                ToolTip::e404();
+                //404或异常
+                IS_DEBUG ? Tip::debug('URL太长') : Tip::notFound();
             }
+                break;
         }
-        if (!empty($classname) && !empty($method)) {
-            (new $classname())->$method();
+        //定义模块名
+        defined('MODULE_NAME') or define('MODULE_NAME', $module);
+        if (is_dir(APP_PATH . $module)) {
+            $name = ucfirst($module) . '\\Controller\\' . ucfirst($controller);
+            $class = new $name;
+            if (method_exists($class, $action)) {
+                if (is_callable(array($name, $action), false)) {
+                    $class->$action();
+                } else {
+                    IS_DEBUG ? Tip::debug("{$module}模块,{$controller}控制器,{$action}方法不能被调用,请检查方法的修饰符") : Tip::notFound();
+                }
+            } else {
+                IS_DEBUG ? Tip::debug("{$module}模块,{$controller}控制器,{$action}方法不存在") : Tip::notFound();
+            }
         } else {
-            ToolTip::e404();
+            IS_DEBUG ? Tip::debug("{$module}模块不存在") : Tip::notFound();
         }
     }
 

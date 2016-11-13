@@ -8,7 +8,7 @@
     <style type="text/css">
         body {
             font-family: 'Love Ya Like A Sister', cursive;
-            background: #eaeaea;
+            background: #fff;
             margin: 0;
             padding: 0;
         }

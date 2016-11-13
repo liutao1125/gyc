@@ -1,5 +1,19 @@
 <?php
+
+/**
+ * 设置X-Powered-By
+ */
+
 header("X-Powered-By:GYC");
+
+/**
+ * PHP的版本判断
+ */
+if (version_compare(PHP_VERSION, '5.2.0') == -1) {
+    echo '<p>Gyc 要求PHP版本高于5.2.0</p>';
+    exit();
+}
+
 
 /**
  * 设置时区 'Asia/Shanghai'   亚洲/上海
@@ -8,79 +22,88 @@ date_default_timezone_set('Asia/Shanghai');
 
 
 /**
- * 自动加载类函数
- * @param $class_name
+ * 定义应用路径
  */
-function autoload_class($class_name)
-{
-    $i = strrpos($class_name, '\\');
-    if ($i) {
-        $class_name = substr($class_name, $i + 1);
-    }
-    //框架核心类库
-    $file_name = SYS_PATH . "sys/$class_name.class.php";
-    if (file_exists($file_name)) {
-        require_once $file_name;
-        return;
-    }
-    //框架类库
-    $file_name = SYS_PATH . "lib/$class_name.class.php";
-    if (file_exists($file_name)) {
-        require_once $file_name;
-        return;
-    }
-    //视图类
-    $file_name = APP_PATH . "model/$class_name.class.php";
-    if (file_exists($file_name)) {
-        require_once $file_name;
-        return;
-    }
-    //自定义辅助类
-    $file_name = APP_PATH . "helper/$class_name.class.php";
-    if (file_exists($file_name)) {
-        require_once $file_name;
-        return;
-    }
+defined('APP_PATH') or define('APP_PATH', './app/');
+
+/**
+ * 定义资源路径
+ */
+defined('ASSET_PATH') or define('ASSET_PATH', './asset/');
+
+/**
+ * 决定使用http或https
+ */
+if ($_SERVER['SERVER_PORT'] == '80') {
+    $transfer_protocol = 'http://';
+} elseif ($_SERVER['SERVER_PORT'] == '443') {
+    $transfer_protocol = 'https://';
 }
 
 /**
- * 注册自动加载类
+ * 定义根url
  */
-spl_autoload_register('autoload_class');
+defined('BASE_URL') or define('BASE_URL', "$transfer_protocol{$_SERVER ['HTTP_HOST']}" . substr($_SERVER['PHP_SELF'], 0, strpos($_SERVER['PHP_SELF'], 'index.php')));
 
 
 /**
- * 在本机时只关闭E_NOTICE错误提示，在服务器时关闭所有错误提示
+ * 定义资源URL
  */
-if (in_array(substr($_SERVER['HTTP_HOST'], 0, 5), array('127.0', '192.1', 'local'))) {
+defined('ASSET_URL') or define('ASSET_URL', "$transfer_protocol{$_SERVER ['HTTP_HOST']}" . substr($_SERVER['PHP_SELF'], 0, strpos($_SERVER['PHP_SELF'], 'index.php')) . 'asset/');
+
+
+/**
+ * 定义框架路径
+ */
+defined('GYC_PATH') or define('GYC_PATH', './gyc/');
+
+
+/**
+ * 加载MCA配置
+ */
+include GYC_PATH . 'config/mca.config.php';
+
+/**
+ * 加载调试配置
+ */
+include GYC_PATH . 'config/debug.config.php';
+
+/**
+ * 屏蔽NOTICE级别错误
+ */
+if (NO_NOTICE) {
     error_reporting(E_ALL ^ E_NOTICE);
-} else {
-    set_error_handler(function ($e_number, $e_message, $e_file, $e_line, $e_vars) {
-        if ($e_number != E_NOTICE) {
-            echo '<div>A system error occurred . we apologize for the inconvenience.</div>';
-        }
-    });
 }
+
 
 /**
- * 获取模块,控制器,方法
+ * 自动加载类
  */
-//index.php的位置
-$index_pos = strpos($_SERVER['PHP_SELF'], 'index.php');
-//直接获取了BCM,适用于不在根目录下
-$bcm = trim(substr($_SERVER['PHP_SELF'], $index_pos + 9), '/');
-//获取不在根目录的路径
-$second_dir = trim(substr($_SERVER['PHP_SELF'], 0, $index_pos), '/');
-//不在根目录下
-if (empty($bcm) && empty($second_dir)) {
-    //获取请求字符串的位置
-    $request_pos = strpos($_SERVER['REQUEST_URI'], '?');
-    if ($request_pos === false) {
-        $bcm = trim($_SERVER['REQUEST_URI'], '/');
-    } else {
-        $bcm = trim(substr($_SERVER['REQUEST_URI'], 0, $request_pos), '/');
+spl_autoload_register(function ($class) {
+    $name_array = array_map(function ($item) {
+        return lcfirst($item);
+    }, explode('\\', $class));
+    $path = null;
+    $count = count($name_array);
+    for ($i = 0; $i < $count; $i++) {
+        $path .= "{$name_array[$i]}/";
+        if ($i == $count - 2) {
+            $c = ucfirst($name_array[$i + 1]);
+            $path .= $c;
+            break;
+        }
     }
-}
+    $path_array = array(
+        "./$path.class.php",
+        APP_PATH . "$path.class.php",
+    );
+    foreach ($path_array as $p) {
+        if (file_exists($p)) {
+            require $p;
+            break;
+        }
+    }
+});
 
-//开始路由
-GYC\sys\Router::router($bcm);
+
+Gyc\Sys\Dispatcher::dispatch();

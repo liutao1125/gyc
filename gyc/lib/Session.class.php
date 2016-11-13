@@ -1,5 +1,5 @@
 <?php
-namespace GYC\lib;
+namespace Gyc\Lib;
 
 class Session
 {
