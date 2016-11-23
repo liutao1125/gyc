@@ -9,8 +9,8 @@ header("X-Powered-By:GYC");
 /**
  * PHP的版本判断
  */
-if (version_compare(PHP_VERSION, '5.2.0') == -1) {
-    echo '<p>Gyc 要求PHP版本高于5.2.0</p>';
+if (version_compare(PHP_VERSION, '5.4.0') == -1) {
+    echo '<p>Gyc 要求PHP版本高于5.4.0</p>';
     exit();
 }
 
@@ -29,7 +29,7 @@ defined('APP_PATH') or define('APP_PATH', './app/');
 /**
  * 定义资源路径
  */
-defined('ASSET_PATH') or define('ASSET_PATH', './asset/');
+defined('ASSET_PATH') or define('ASSET_PATH', './res/');
 
 /**
  * 决定使用http或https
@@ -49,7 +49,7 @@ defined('BASE_URL') or define('BASE_URL', "$transfer_protocol{$_SERVER ['HTTP_HO
 /**
  * 定义资源URL
  */
-defined('ASSET_URL') or define('ASSET_URL', "$transfer_protocol{$_SERVER ['HTTP_HOST']}" . substr($_SERVER['PHP_SELF'], 0, strpos($_SERVER['PHP_SELF'], 'index.php')) . 'asset/');
+defined('ASSET_URL') or define('ASSET_URL', "$transfer_protocol{$_SERVER ['HTTP_HOST']}" . substr($_SERVER['PHP_SELF'], 0, strpos($_SERVER['PHP_SELF'], 'index.php')) . 'res/');
 
 
 /**
@@ -59,14 +59,19 @@ defined('GYC_PATH') or define('GYC_PATH', './gyc/');
 
 
 /**
- * 加载MCA配置
- */
-include GYC_PATH . 'config/mca.config.php';
-
-/**
  * 加载调试配置
  */
-include GYC_PATH . 'config/debug.config.php';
+require GYC_PATH . 'config/debug.config.php';
+
+/**
+ * 加载默认模块、控制器、动作配置
+ */
+require GYC_PATH . 'config/mca.config.php';
+
+/**
+ * 记载session配置
+ */
+require GYC_PATH . 'config/session.config.php';
 
 /**
  * 屏蔽NOTICE级别错误
@@ -74,7 +79,6 @@ include GYC_PATH . 'config/debug.config.php';
 if (NO_NOTICE) {
     error_reporting(E_ALL ^ E_NOTICE);
 }
-
 
 /**
  * 自动加载类
@@ -97,13 +101,17 @@ spl_autoload_register(function ($class) {
         "./$path.class.php",
         APP_PATH . "$path.class.php",
     );
+    $find = false;
     foreach ($path_array as $p) {
         if (file_exists($p)) {
             require $p;
+            $find = true;
             break;
         }
     }
+    if (!$find) {
+        IS_DEBUG ? \Gyc\Sys\Tip::debug("未定义类：{$class}") : \Gyc\Sys\Tip::notFound();
+    }
 });
 
-
-Gyc\Sys\Dispatcher::dispatch();
+require GYC_PATH . 'config/router.config.php';

@@ -7,19 +7,9 @@ namespace Gyc\Sys;
  */
 class Build
 {
-    private $routerConfig = '<?php
-/**
- * 路由配置
- */
-return array();';
-
     public function __construct()
     {
-        $module = DEFAULT_MODULE . '|' . REGISTER_MODULE;
-        $module_array = array_unique(array_filter(explode('|', $module)));
-        foreach ($module_array as $item) {
-            self::create($item);
-        }
+        self::create(DEFAULT_MODULE);
     }
 
     /**
@@ -42,7 +32,6 @@ return array();';
                 mkdir($dir);
                 fopen($dir . 'index.html', "w");
             }
-            file_put_contents($dirs[2] . 'router.config.php', $this->routerConfig);
             file_put_contents($dirs[3] . 'Welcome.class.php', $this->getControllerContent($name));
         }
     }

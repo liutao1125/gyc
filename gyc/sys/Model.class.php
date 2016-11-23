@@ -35,7 +35,7 @@ class Model
      * @param $sql
      * @return bool|mixed
      */
-    protected final function findSql($sql)
+    protected function sqlFind($sql)
     {
         try {
             $stmt = self::$dbp->prepare($sql);
@@ -55,7 +55,7 @@ class Model
      * @param $sql
      * @return array|bool
      */
-    protected final function selectSql($sql)
+    protected function sqlSelect($sql)
     {
         try {
             $stmt = self::$dbp->prepare($sql);
@@ -75,7 +75,7 @@ class Model
      * @param $sql
      * @return bool|int
      */
-    protected final function uidSql($sql)
+    protected function sqlExec($sql)
     {
         try {
             $stmt = self::$dbp->prepare($sql);
@@ -98,7 +98,7 @@ class Model
      * @param array $where_data
      * @return array|bool
      */
-    protected final function select($table, $fields = '*', $where_data = array())
+    protected function select($table, $fields = '*', $where_data = array())
     {
         $sql = "select $fields from $table";
         if (!empty($this->where_str)) {
@@ -130,7 +130,7 @@ class Model
      * @param array $where_data
      * @return bool|mixed
      */
-    protected final function find($table, $fields = '*', $where_data = array())
+    protected function find($table, $fields = '*', $where_data = array())
     {
         $sql = "select $fields from $table";
         if (!empty($this->where_str)) {
@@ -162,7 +162,7 @@ class Model
      * @param array $where_data
      * @return bool|int
      */
-    protected final function update($table, $sets = array(), $where_data = array())
+    protected function update($table, $sets = array(), $where_data = array())
     {
         $sql = "update $table set ";
         $set_str = null;
@@ -203,7 +203,7 @@ class Model
      * @param array $value_data
      * @return bool|int
      */
-    protected final function insert($table, $value_data = array())
+    protected function insert($table, $value_data = array())
     {
         $fields = implode(',', array_map(function ($v) {
             return ltrim($v, ':');
@@ -233,7 +233,7 @@ class Model
      * @param array $value_data
      * @return bool|int
      */
-    protected final function replace($table, $value_data = array())
+    protected function replace($table, $value_data = array())
     {
         $fields = implode(',', array_map(function ($v) {
             return ltrim($v, ':');
@@ -263,7 +263,7 @@ class Model
      * @param array $where_data
      * @return bool|int
      */
-    protected final function delete($table, $where_data = array())
+    protected function delete($table, $where_data = array())
     {
         $sql = "delete from $table {$this->where_str}";
         try {
@@ -290,11 +290,43 @@ class Model
     }
 
     /**
+     * 返回记录的个数
+     * @param $table
+     * @param array $where_data
+     * @return bool
+     */
+    public function count($table, $where_data = array())
+    {
+        $sql = "select count(*) as total from $table {$this->where_str}";
+        if (!empty($this->where_str)) {
+            $sql .= $this->where_str;
+        }
+        try {
+            $stmt = self::$dbp->prepare($sql);
+            if (empty($where_data)) {
+                $stmt->execute();
+            } else {
+                $stmt->execute($where_data);
+            }
+            if ($stmt->columnCount() > 0) {
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                return $result['total'];
+            } else {
+                return false;
+            }
+        } catch (PDOException $e) {
+            Tip::e($e);
+        } finally {
+            $this->where_str = null;
+        }
+    }
+
+    /**
      * 设置条件，不是条件值：calories < :calories AND colour = :colour';
      * @param $str
      * @return $this
      */
-    protected final function where($str)
+    protected function where($str)
     {
         $this->where_str = ' ' . $str;
         return $this;
@@ -304,7 +336,7 @@ class Model
      * 针对MySQL,自增字段，获得刚刚插入的id
      * @return bool
      */
-    public final function getLastInsertId()
+    public function getLastInsertId()
     {
         try {
             $sql = 'select LAST_INSERT_ID() as id';
@@ -322,7 +354,7 @@ class Model
     /**
      * 销毁dbp对象
      */
-    /* public final function __destruct()
+    /* public  function __destruct()
      {
          self::$dbp = null;
      }*/

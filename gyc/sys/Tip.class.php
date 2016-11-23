@@ -1,6 +1,8 @@
 <?php
 namespace Gyc\Sys;
 
+use Exception;
+
 /**
  * 提示
  * Class Tip
@@ -43,7 +45,7 @@ class Tip
      * 异常
      * @param \Exception $e
      */
-    public static function e(\Exception $e)
+    public static function e(Exception $e)
     {
         $code = $e->getCode();
         $message = $e->getMessage();
